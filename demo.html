@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+
+<script type="text/javascript">
+
+
+    function jsApiCall() {
+        WeixinJSBridge.invoke(
+            'getBrandWCPayRequest',
+        <?php echo $jsApiParameters; ?>,
+        function (res) {
+            WeixinJSBridge.log(res.err_msg);
+            if (res.err_msg != 'get_brand_wcpay_request:ok') {
+                // alert('支付取消.');
+                history.back();
+                return false;
+            }
+            window.location.href = "<?php echo $return_url;?>";
+        }
+    );
+    }
+
+    function callpay() {
+        if (typeof WeixinJSBridge == "undefined") {
+            if (document.addEventListener) {
+                document.addEventListener('WeixinJSBridgeReady', jsApiCall, false);
+            } else if (document.attachEvent) {
+                document.attachEvent('WeixinJSBridgeReady', jsApiCall);
+                document.attachEvent('onWeixinJSBridgeReady', jsApiCall);
+            }
+        } else {
+            jsApiCall();
+        }
+    }
+
+    callpay();
+</script>
+</body>
+</html>

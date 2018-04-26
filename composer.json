@@ -1,20 +1,18 @@
 {
   "name": "first236108/payment",
   "description": "整合微信支付宝模块",
-  "keywords": ["pay", "payment", "微信支付", "支付宝支付", "h5支付"],
-  "version":"1.2.0",
   "license": "MIT",
+  "version":"1.0.0",
   "authors": [
     {
       "name": "Alex Pan",
       "email": "85210755@qq.com",
-      "homepage": "https://blog.csdn.net/first236108/"
+      "homepage": "http://blog.csdn.net/first236108"
     }
   ],
-  "require": {
-    "php": ">=5.4"
-  },
   "autoload": {
-    "psr-4": {"Payment\\": "Payment/"}
+    "psr-4": {
+      "Payment\\": "src/"
+    }
   }
 }

@@ -7,7 +7,6 @@
  */
 
 namespace Payment;
-require_once 'autoload.php';
 
 use Payment\Ali\Aop\request\AlipayTradeFastpayRefundQueryRequest;
 use Payment\Ali\Service\AlipayTradeService;
@@ -21,14 +20,37 @@ use Payment\Ali\Buildermodel\AlipayTradePrecreateContentBuilder;
 
 class AliPay
 {
-    private $config = [];
+    private $config = [
+        'app_id'               => "",
+        //商户私钥，您的原始格式RSA私钥
+        'merchant_private_key' => "",
+        //异步通知地址
+        'notify_url'           => "",
+        //同步跳转
+        'return_url'           => "",
+        //编码格式
+        'charset'              => "UTF-8",
+        //签名方式
+        'sign_type'            => "RSA2",
+        //支付宝网关
+        'gatewayUrl'           => "https://openapi.alipay.com/gateway.do",
+        //支付宝公钥,查看地址：https://openhome.alipay.com/platform/keyManage.htm 对应APPID下的支付宝公钥。
+        'alipay_public_key'    => "",
+        //最大查询重试次数
+        'MaxQueryRetry'        => "10",
+        //查询间隔
+        'QueryDuration'        => "3"
+    ];
 
-    public function __construct()
+    public function __construct(array $config = [])
     {
-        require_once __DIR__ . DIRECTORY_SEPARATOR . 'Ali' . DIRECTORY_SEPARATOR . 'config.php';
-        $this->config = $config;
+        $this->config = array_merge($this->config, $config);
     }
 
+    public function app($subject, $out_trade_no, $total_fee, $return_url, $notify_url, $goods_tag = '', $attach = '')
+    {
+        
+    }
     /**
      * 手机H5支付
      * @param $subject
@@ -48,9 +70,9 @@ class AliPay
         $builder->setOutTradeNo($out_trade_no);
         $builder->setTotalAmount($total_fee);
         $builder->setTimeExpress($timeout_express);
-        $pay    = new AlipayTradeService($this->config);
-        $result = $pay->wapPay($builder, $return_url, $notify_url);
-        return;
+        $pay = new AlipayTradeService($this->config);
+        $res = $pay->wapPay($builder, $return_url, $notify_url);
+        exit();//跳转
     }
 
     /**
@@ -71,26 +93,28 @@ class AliPay
         $builder->setTotalAmount($total_fee);
         $builder->setOutTradeNo($out_trade_no);
         $pay    = new AlipayTradeService($this->config);
-        $result = $pay->wapPay($builder, $return_url, $notify_url);
-        return;
+        $result = $pay->pagePay($builder, $return_url, $notify_url);
+        exit();//跳转
     }
 
-    public function qrPay($subject, $out_trade_no, $total_fee, $notify_url, $timeExpress = "120m")
+    public function qrPay($subject, $out_trade_no, $total_fee, $notify_url, $make_img = false, $timeExpress = "120m")
     {
-        $builder=new AlipayTradePrecreateContentBuilder();
+        $builder = new AlipayTradePrecreateContentBuilder();
         $builder->setOutTradeNo($out_trade_no);
         $builder->setTotalAmount($total_fee);
         $builder->setTimeExpress($timeExpress);
         $builder->setSubject($subject);
         $builder->setNotifyUrl($notify_url);
         $builder->setDisablePayChinnels('pcredit,pcreditpayInstallment,creditCard,creditCardExpress,creditCardCartoon');
-        $qrPay = new AlipayTradeService($this->config);
+        $qrPay  = new AlipayTradeService($this->config);
         $result = $qrPay->qrPay($builder);
-        if (!isset($result->code))
-            return ['ret' => 0, 'msg' => '提现申请失败'];
-        if ($result->code != '10000')
-            return ['ret' => 0, 'msg' => $result->msg . $result->sub_msg];
-        return json_decode(json_encode($result), true);
+        $res    = $result->getResponse();
+        if ($result->getTradeStatus() !== 'SUCCESS')
+            return ['ret' => 0, 'msg' => $res];
+        $url = $res->qr_code;
+        if ($make_img)
+            $url = $qrPay->create_erweima($url);//TODO 生成图片需要改造
+        return ['ret' => 1, 'result' => $url];
     }
 
     /**
@@ -114,13 +138,12 @@ class AliPay
         if ($payer_show_name) $builder->setPayerShowName($payer_show_name);
         if ($payee_real_name) $builder->setPayeeRealName($payee_real_name);
         if ($remark) $builder->setRemark($remark);
-        $pay = new AlipayTradeService($this->config);
-        $result=$pay->transfer($builder);
-        if (!isset($result->code))
-            return ['ret' => 0, 'msg' => '提现申请失败'];
-        if ($result->code != '10000')
-            return ['ret' => 0, 'msg' => $result->msg . $result->sub_msg];
-        return json_decode(json_encode($result), true);
+        $pay    = new AlipayTradeService($this->config);
+        $result = $pay->transfer($builder);
+        $res    = $result->alipay_fund_trans_toaccount_transfer_response;
+        if ($res->code != 10000)
+            return ['ret' => 0, 'msg' => $res->sub_msg];
+        return ['ret' => 1, 'result' => json_decode(json_encode($res), true)];
     }
 
     /**
@@ -173,7 +196,7 @@ class AliPay
         if (!isset($result->code))
             return ['ret' => 0, 'msg' => '查询失败'];
         if ($result->code != '10000')
-            return ['ret' => 0, 'msg' => $result->msg];
+            return ['ret' => 0, 'msg' => $result->sub_msg];
         return json_decode(json_encode($result), true);
     }
 
@@ -206,8 +229,9 @@ class AliPay
         $result = $aop->refundQuery($builder);
         if (!isset($result->alipay_trade_fastpay_refund_query_response->code))
             return ['ret' => 0, 'msg' => '查询失败'];
-        if ($result->alipay_trade_fastpay_refund_query_response->code != '10000')
-            return ['ret' => 0, 'msg' => $result->alipay_trade_fastpay_refund_query_response->msg . $result->alipay_trade_fastpay_refund_query_response->sub_msg];
-        return ['ret' => 1, 'msg' => $result->alipay_trade_fastpay_refund_query_response->msg];//json_decode(json_encode($result), true);
+        $result = $result->alipay_trade_fastpay_refund_query_response;
+        if ($result->code != '10000')
+            return ['ret' => 0, 'msg' => $result->msg . $result->sub_msg];
+        return ['ret' => 1, 'msg' => json_decode(json_encode($result), true)];
     }
 }

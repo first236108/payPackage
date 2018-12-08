@@ -7,8 +7,6 @@
  */
 
 namespace Payment;
-require_once 'autoload.php';
-require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . '/Wx/lib/phpqrcode/phpqrcode.php';
 
 use Payment\Wx\lib\WxPayApi;
 use Payment\Wx\lib\JsApiPay;
@@ -22,17 +20,29 @@ use Payment\Wx\lib\WxPayResults;
 
 class WxPay
 {
-    public function __construct($appid = '', $mchid = '', $key = '', $secret = '')
+    private $config = [
+        'appid'           => '',
+        'mchid'           => '',
+        'key'             => '',
+        'secret'          => '',
+        'sslcert_path'    => '',
+        'sslkey_path'     => '',
+        'curl_proxy_host' => '0.0.0.0',
+        'curl_proxy_port' => 0,
+        'report_level'    => 1,
+        'notify_url'      => ''
+    ];
+
+    public function __construct(array $config = [])
     {
-        //
+        $this->config = array_merge($this->config, $config);
     }
 
     public function jsPay($subject, $out_trade_no, $total_fee, $notify_url, $goods_tag = '', $attach = '')
     {
-        //TODO $return_url如何封装返回给前端
-        $tools  = new JsApiPay();
+        $tools  = new JsApiPay($this->config);
         $openId = $tools->GetOpenid();
-        $input  = new WxPayUnifiedOrder();
+        $input  = new WxPayUnifiedOrder($this->config['key']);
         $input->SetBody($subject);
         $input->SetOut_trade_no($out_trade_no);
         $input->SetTotal_fee($total_fee * 100);
@@ -42,14 +52,15 @@ class WxPay
         if ($attach) $input->SetAttach($attach);
 
         $input->SetOpenid($openId);
-        $order           = WxPayApi::unifiedOrder($input);
+        $pay             = new WxPayApi($this->config);
+        $order           = $pay->unifiedOrder($input);
         $jsApiParameters = $tools->GetJsApiParameters($order);
         return $jsApiParameters;
     }
 
     public function h5Pay($subject, $out_trade_no, $total_fee, $return_url, $notify_url, $goods_tag = '', $attach = '')
     {
-        $input = new WxPayUnifiedOrder();
+        $input = new WxPayUnifiedOrder($this->config['key']);
         $input->SetBody($subject);
         $input->SetOut_trade_no($out_trade_no);
         $input->SetTotal_fee($total_fee * 100);
@@ -57,7 +68,8 @@ class WxPay
         $input->SetTrade_type("MWEB");
         if ($goods_tag) $input->SetGoods_tag($goods_tag);
         if ($attach) $input->SetAttach($attach);
-        $result = WxPayApi::unifiedOrder($input);
+        $pay    = new WxPayApi($this->config);
+        $result = $pay->unifiedOrder($input);
         if ($result['return_code'] == 'FAIL') {
             return ['ret' => 0, 'msg' => $result['return_msg']];
         }
@@ -69,7 +81,7 @@ class WxPay
 
     public function qrcodePay($subject, $out_trade_no, $total_fee, $notify_url, $goods_tag = '', $attach = '')
     {
-        $input = new WxPayUnifiedOrder();
+        $input = new WxPayUnifiedOrder($this->config['key']);
         $input->SetBody($subject);
         $input->SetOut_trade_no($out_trade_no);
         $input->SetTotal_fee($total_fee * 100);
@@ -80,7 +92,7 @@ class WxPay
         if ($attach) $input->SetAttach($attach);
 
         $tool   = new NativePay();
-        $result = $tool->GetPayUrl($input);
+        $result = $tool->GetPayUrl($input, $this->config);
 
         if ($result['return_code'] == 'FAIL') {
             return ['ret' => 0, 'msg' => $result['return_msg']];
@@ -99,7 +111,7 @@ class WxPay
      */
     public function query($out_trade_no = '', $trade_no = '')
     {
-        $input = new WxPayOrderQuery();
+        $input = new WxPayOrderQuery($this->config['key']);
         if ($out_trade_no) {
             $input->SetOut_trade_no($out_trade_no);
         } elseif ($trade_no) {
@@ -107,7 +119,8 @@ class WxPay
         } else {
             return ['ret' => 0, 'msg' => '订单号与微信交易号不能同时为空'];
         }
-        $result = WxPayApi::orderQuery($input);
+        $tool   = new WxPayApi($this->config);
+        $result = $tool->orderQuery($input);
 
         if ($result['return_code'] == 'FAIL') {
             return ['ret' => 0, 'msg' => $result['return_msg']];
@@ -135,7 +148,7 @@ class WxPay
     }
 
     /**
-     * @param $refund_no    同一订单支付多次退款，每次退款需更换不同的退款单号
+     * @param $refund_no 同一订单支付多次退款，每次退款需更换不同的退款单号
      * @param $total_fee
      * @param $refund_fee
      * @param string $out_trade_no
@@ -144,7 +157,7 @@ class WxPay
      */
     public function refund($refund_no, $total_fee, $refund_fee, $out_trade_no = '', $trade_no = '')
     {
-        $input = new WxPayRefund();
+        $input = new WxPayRefund($this->config['key']);
         if ($out_trade_no) {
             $input->SetOut_trade_no($out_trade_no);
         } elseif ($trade_no) {
@@ -156,7 +169,8 @@ class WxPay
         $input->SetTotal_fee($total_fee * 100);
         $input->SetRefund_fee($refund_fee * 100);
         $input->SetOut_refund_no($refund_no);
-        $result = WxPayApi::refund($input);
+        $tool   = new WxPayApi($this->config);
+        $result = $tool->refund($input);
 
         if ($result['return_code'] == 'FAIL') {
             return ['ret' => 0, 'msg' => $result['return_msg']];
@@ -182,7 +196,7 @@ class WxPay
      */
     public function refundQuery($out_trade_no = '', $trade_no = '', $out_refund_no = '', $refund_no = '')
     {
-        $input = new WxPayRefundQuery();
+        $input = new WxPayRefundQuery($this->config['key']);
         if ($out_trade_no) {
             $input->SetOut_trade_no($out_trade_no);
         } elseif ($trade_no) {
@@ -195,7 +209,8 @@ class WxPay
             return ['ret' => 0, 'msg' => '订单号与微信交易号不能同时为空'];
         }
 
-        $result = WxPayApi::refundQuery($input);
+        $tool   = new WxPayApi($this->config);
+        $result = $tool->refundQuery($input);
         if ($result['return_code'] == 'FAIL')
             return ['ret' => 0, 'msg' => $result['return_msg']];
         if ($result['result_code'] == 'FAIL')
@@ -223,14 +238,15 @@ class WxPay
     }
 
     /**
+     * @param $key
      * @return array|bool notify OK后返回验证数组
      */
-    public static function checkNotify()
+    public static function checkNotify($key)
     {
         $xml = file_get_contents('php://input');
         //如果返回成功则验证签名
         try {
-            $result = WxPayResults::Init($xml);
+            $result = WxPayResults::Init($xml, $key);
         } catch (WxPayException $e) {
             $msg = $e->errorMessage();
             return false;

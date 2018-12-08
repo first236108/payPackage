@@ -74,9 +74,9 @@ class WxPayResults extends WxPayDataBase
      * @param string $xml
      * @throws WxPayException
      */
-    public static function Init($xml)
+    public static function Init($xml,$key)
     {
-        $obj = new self();
+        $obj = new self($key);
         $obj->FromXml($xml);
         //fix bug 2015-06-29
         if($obj->values['return_code'] != 'SUCCESS'){

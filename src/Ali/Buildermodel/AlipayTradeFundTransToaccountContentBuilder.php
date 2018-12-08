@@ -1,4 +1,5 @@
 <?php
+
 namespace Payment\Ali\Buildermodel;
 /* *
  * 功能：支付宝电脑网站支付查询接口(alipay.trade.query)接口业务参数封装
@@ -17,7 +18,7 @@ class AlipayTradeFundTransToaccountContentBuilder
 
     // 支付宝交易号
     private $payee_type;
-    
+
     private $payee_account;
 
     private $amount;
@@ -27,6 +28,8 @@ class AlipayTradeFundTransToaccountContentBuilder
     private $payee_real_name;//收款方真实姓名,收款方真实姓名（最长支持100个英文/50个汉字）。如果本参数不为空，则会校验该账户在支付宝登记的实名是否与收款方真实姓名一致。
 
     private $remark;
+
+    private $bizContent = NULL;
 
     /**
      * @return mixed
@@ -154,4 +157,19 @@ class AlipayTradeFundTransToaccountContentBuilder
         return $this;
     }//收款方真实姓名,转账备注（支持200个英文/100个汉字）。当付款方为企业账户，且转账金额达到（大于等于）50000元，remark不能为空。收款方可见，会展示在收款用户的收支详情中。
 
+    public function getBizContent()
+    {
+        if (is_null($this->bizContent)) {
+            $this->out_biz_no && $this->bizContent['out_biz_no'] = $this->out_biz_no;
+            $this->payee_type && $this->bizContent['payee_type'] = $this->payee_type;
+            $this->payee_account && $this->bizContent['payee_account'] = $this->payee_account;
+            $this->amount && $this->bizContent['amount'] = $this->amount;
+            $this->payer_show_name && $this->bizContent['payer_show_name'] = $this->payer_show_name;
+            $this->payee_real_name && $this->bizContent['payee_real_name'] = $this->payee_real_name;
+            $this->remark && $this->bizContent['remark'] = $this->remark;
+            $this->bizContent && $this->bizContent['bizContent'] = $this->bizContent;
+        }
+
+        return json_encode($this->bizContent, JSON_UNESCAPED_UNICODE);
+    }
 }

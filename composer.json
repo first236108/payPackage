@@ -1,8 +1,8 @@
 {
   "name": "first236108/payment",
-  "description": "整合微信支付宝模块",
+  "description": "整合微信支付宝模块，增加app支付",
   "license": "MIT",
-  "version":"1.0.1",
+  "version":"1.1",
   "authors": [
     {
       "name": "Alex Pan",

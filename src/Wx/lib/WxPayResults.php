@@ -5,6 +5,7 @@
  * NickName: 柏宇娜
  * Date: 2018/3/9 22:28
  */
+
 namespace Payment\Wx\lib;
 /**
  *
@@ -21,12 +22,12 @@ class WxPayResults extends WxPayDataBase
     public function CheckSign()
     {
         //fix异常
-        if(!$this->IsSignSet()){
+        if (!$this->IsSignSet()) {
             throw new WxPayException("签名错误！");
         }
 
         $sign = $this->MakeSign();
-        if($this->GetSign() == $sign){
+        if ($this->GetSign() == $sign) {
             return true;
         }
         throw new WxPayException("签名错误！");
@@ -52,7 +53,7 @@ class WxPayResults extends WxPayDataBase
     {
         $obj = new self();
         $obj->FromArray($array);
-        if($noCheckSign == false){
+        if ($noCheckSign == false) {
             $obj->CheckSign();
         }
         return $obj;
@@ -74,15 +75,14 @@ class WxPayResults extends WxPayDataBase
      * @param string $xml
      * @throws WxPayException
      */
-    public static function Init($xml,$key)
+    public function Init($xml)
     {
-        $obj = new self($key);
-        $obj->FromXml($xml);
+        $this->FromXml($xml);
         //fix bug 2015-06-29
-        if($obj->values['return_code'] != 'SUCCESS'){
+        if ($this->values['return_code'] != 'SUCCESS') {
             return $obj->GetValues();
         }
-        $obj->CheckSign();
-        return $obj->GetValues();
+        $this->CheckSign();
+        return $this->GetValues();
     }
 }

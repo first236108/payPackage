@@ -44,6 +44,8 @@ class AlipayTradeService
 
     public $token = NULL;
 
+    public $notify_url = '';
+
     //返回数据格式
     public $format = "json";
 
@@ -58,6 +60,7 @@ class AlipayTradeService
         $this->alipay_public_key = $alipay_config['alipay_public_key'];
         $this->charset           = $alipay_config['charset'];
         $this->signtype          = $alipay_config['sign_type'];
+        $this->notify_url       = $alipay_config['notify_url'];
 
         if (empty($this->appid) || trim($this->appid) == "") {
             throw new Exception("appid should not be NULL!");
@@ -77,9 +80,20 @@ class AlipayTradeService
 
     }
 
-    function AlipayWapPayService($alipay_config)
+    function app($builder, $notify_url = '')
     {
-        $this->__construct($alipay_config);
+        $aop                     = new AopClient ();
+        $aop->gatewayUrl         = $this->gateway_url;
+        $aop->appId              = $this->appid;
+        $aop->rsaPrivateKey      = $this->private_key;
+        $aop->format             = $this->format;
+        $aop->charset            = $this->charset;
+        $aop->apiVersion         = "1.0";
+        $aop->signType           = 'RSA2';
+        $aop->alipayrsaPublicKey = $this->alipay_public_key;
+        $response                = $aop->sdkExecute($builder);
+        return $response;
+
     }
 
     /**
@@ -94,7 +108,7 @@ class AlipayTradeService
 
         $biz_content = $builder->getBizContent();
         //打印业务参数
-        $this->writeLog($biz_content);
+        //$this->writeLog($biz_content);
 
         $request = new AlipayTradeWapPayRequest();
 
@@ -111,7 +125,7 @@ class AlipayTradeService
     function transfer($builder)
     {
         $biz_content = $builder->getBizContent();
-        $this->writeLog($biz_content);
+        //$this->writeLog($biz_content);
 
         $request = new AlipayFundTransToaccountTransferRequest();
 
@@ -132,7 +146,7 @@ class AlipayTradeService
 
         $biz_content = $builder->getBizContent();
         //打印业务参数
-        $this->writeLog($biz_content);
+        //$this->writeLog($biz_content);
 
         $request = new AlipayTradePagePayRequest();
 
@@ -151,7 +165,7 @@ class AlipayTradeService
     {
 
         $bizContent = $req->getBizContent();
-        $this->writeLog($bizContent);
+        //$this->writeLog($bizContent);
 
         $request = new AlipayTradePrecreateRequest();
         $request->setBizContent($bizContent);
@@ -196,7 +210,7 @@ class AlipayTradeService
         }
 
         //打开后，将报文写入log文件
-        $this->writeLog("response: " . var_export($result, true));
+        //$this->writeLog("response: " . var_export($result, true));
         return $result;
     }
 
@@ -209,7 +223,7 @@ class AlipayTradeService
     {
         $biz_content = $builder->getBizContent();
         //打印业务参数
-        $this->writeLog($biz_content);
+        //$this->writeLog($biz_content);
         $request = new AlipayTradeQueryRequest();
         $request->setBizContent($biz_content);
 
@@ -228,7 +242,7 @@ class AlipayTradeService
     {
         $biz_content = $builder->getBizContent();
         //打印业务参数
-        $this->writeLog($biz_content);
+        //$this->writeLog($biz_content);
         $request = new AlipayTradeRefundRequest();
         $request->setBizContent($biz_content);
 
@@ -247,7 +261,7 @@ class AlipayTradeService
     {
         $biz_content = $builder->getBizContent();
         //打印业务参数
-        $this->writeLog($biz_content);
+        //$this->writeLog($biz_content);
         $request = new AlipayTradeCloseRequest();
         $request->setBizContent($biz_content);
 
@@ -266,7 +280,7 @@ class AlipayTradeService
     {
         $biz_content = $builder->getBizContent();
         //打印业务参数
-        $this->writeLog($biz_content);
+        //$this->writeLog($biz_content);
         $request = new AlipayTradeFastpayRefundQueryRequest();
         $request->setBizContent($biz_content);
 
@@ -284,7 +298,7 @@ class AlipayTradeService
     {
         $biz_content = $builder->getBizContent();
         //打印业务参数
-        $this->writeLog($biz_content);
+        //$this->writeLog($biz_content);
         $request = new alipaydatadataservicebilldownloadurlqueryRequest();
         $request->setBizContent($biz_content);
 
@@ -329,5 +343,3 @@ class AlipayTradeService
         return $image;
     }
 }
-
-?>

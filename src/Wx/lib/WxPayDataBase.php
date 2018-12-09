@@ -5,8 +5,6 @@
 
 namespace Payment\Wx\lib;
 
-use Payment\Wx\WxPayConfig;
-
 /**
  *
  * 数据对象基础类，该类中定义数据类最基本的行为，包括：
@@ -1844,3 +1842,4 @@ class WxPayBizPayUrl extends WxPayDataBase
         return array_key_exists('product_id', $this->values);
     }
 }
+

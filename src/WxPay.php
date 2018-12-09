@@ -38,6 +38,21 @@ class WxPay
         $this->config = array_merge($this->config, $config);
     }
 
+    public function app($subject, $out_trade_no, $total_fee, $notify_url, $goods_tag = '', $attach = '')
+    {
+        $input = new WxPayUnifiedOrder($this->config['key']);
+        $input->SetBody($subject);
+        $input->SetOut_trade_no($out_trade_no);
+        $input->SetTotal_fee($total_fee * 100);
+        $input->SetSpbill_create_ip($this->get_client_ip());
+        $input->SetNotify_url($notify_url);
+        $input->SetTrade_type("APP");
+        $pay    = new WxPayApi($this->config);
+        $result = $pay->unifiedOrder($input);
+        dump($result);
+        die;
+    }
+
     public function jsPay($subject, $out_trade_no, $total_fee, $notify_url, $goods_tag = '', $attach = '')
     {
         $tools  = new JsApiPay($this->config);
@@ -169,6 +184,7 @@ class WxPay
         $input->SetTotal_fee($total_fee * 100);
         $input->SetRefund_fee($refund_fee * 100);
         $input->SetOut_refund_no($refund_no);
+        $input->SetOp_user_id($this->config['mchid']);
         $tool   = new WxPayApi($this->config);
         $result = $tool->refund($input);
 
@@ -241,16 +257,35 @@ class WxPay
      * @param $key
      * @return array|bool notify OK后返回验证数组
      */
-    public static function checkNotify($key)
+    public function notify($func)
     {
         $xml = file_get_contents('php://input');
         //如果返回成功则验证签名
         try {
-            $result = WxPayResults::Init($xml, $key);
+            $tool   = new WxPayResults($this->config['key']);
+            $result = $tool->Init($xml);
         } catch (WxPayException $e) {
-            $msg = $e->errorMessage();
-            return false;
+            exit($e->errorMessage());
         }
-        return ($result);
+        if ($result['return_code'] == 'SUCCESS' && $result['result_code'] == 'SUCCESS')
+            $res = call_user_func($func, $result);
+
+        if ($res === true) {
+            $tool->SetData('return_code', 'SUCCESS');
+            $tool->SetData('return_msg', 'OK');
+            $xml = $tool->ToXml();
+            exit($xml);
+        }
+        exit('FAIL');
+    }
+
+    public function get_client_ip()
+    {
+        $cip = 'unknown';
+        if ($_SERVER['REMOTE_ADDR'])
+            $cip = $_SERVER['REMOTE_ADDR'];
+        elseif (getenv('REMOTE_ADDR'))
+            $cip = getenv('REMOTE_ADDR');
+        return $cip;
     }
 }

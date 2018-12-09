@@ -184,26 +184,6 @@ class AopClient {
 		return (float)sprintf('%.0f', (floatval($s1) + floatval($s2)) * 1000);
 	}
 
-
-	protected function logCommunicationError($apiName, $requestUrl, $errorCode, $responseTxt) {
-		$localIp = isset ($_SERVER["SERVER_ADDR"]) ? $_SERVER["SERVER_ADDR"] : "CLI";
-		$logger = new LtLogger;
-		$logger->conf["log_file"] = rtrim(AOP_SDK_WORK_DIR, '\\/') . '/' . "logs/aop_comm_err_" . $this->appId . "_" . date("Y-m-d") . ".log";
-		$logger->conf["separator"] = "^_^";
-		$logData = array(
-			date("Y-m-d H:i:s"),
-			$apiName,
-			$this->appId,
-			$localIp,
-			PHP_OS,
-			$this->alipaySdkVersion,
-			$requestUrl,
-			$errorCode,
-			str_replace("\n", "", $responseTxt)
-		);
-		$logger->log($logData);
-	}
-
     /**
      * 生成用于调用收银台SDK的字符串
      * @param $request SDK接口的请求参数对象
@@ -219,7 +199,7 @@ class AopClient {
 		$params['format'] = $this->format; 
 		$params['sign_type'] = $this->signType;
 		$params['timestamp'] = date("Y-m-d H:i:s");
-		$params['alipay_sdk'] = $this->alipaySdkVersion;
+		//$params['alipay_sdk'] = $this->alipaySdkVersion;//FIXME APP支付好像没这个参数
 		$params['charset'] = $this->postCharset;
 
 		$version = $request->getApiVersion();
@@ -239,7 +219,6 @@ class AopClient {
 		foreach ($params as &$value) {
 			$value = $this->characet($value, $params['charset']);
 		}
-		
 		return http_build_query($params);
 	}
 
@@ -341,14 +320,14 @@ class AopClient {
 	protected function buildRequestForm($para_temp) {
 		
 		$sHtml = "<form id='alipaysubmit' name='alipaysubmit' action='".$this->gatewayUrl."?charset=".trim($this->postCharset)."' method='POST'>";
-		while (list ($key, $val) = each ($para_temp)) {
-			if (false === $this->checkEmpty($val)) {
-				//$val = $this->characet($val, $this->postCharset);
-				$val = str_replace("'","&apos;",$val);
-				//$val = str_replace("\"","&quot;",$val);
-				$sHtml.= "<input type='hidden' name='".$key."' value='".$val."'/>";
-			}
-        }
+        foreach ($para_temp as $key => $val) {
+            if (false === $this->checkEmpty($val)) {
+                //$val = $this->characet($val, $this->postCharset);
+                $val = str_replace("'","&apos;",$val);
+                //$val = str_replace("\"","&quot;",$val);
+                $sHtml.= "<input type='hidden' name='".$key."' value='".$val."'/>";
+            }
+		}
 
 		//submit按钮控件请不要含有name属性
         $sHtml = $sHtml."<input type='submit' value='ok' style='display:none;''></form>";
@@ -399,7 +378,7 @@ class AopClient {
 		//获取业务参数
 		$apiParams = $request->getApiParas();
 
-			if (method_exists($request,"getNeedEncrypt") &&$request->getNeedEncrypt()){
+        if (method_exists($request,"getNeedEncrypt") &&$request->getNeedEncrypt()){
 
 			$sysParams["encrypt_type"] = $this->encryptType;
 
@@ -436,14 +415,11 @@ class AopClient {
 		}
 		$requestUrl = substr($requestUrl, 0, -1);
 
-
 		//发起HTTP请求
 		try {
 			$resp = $this->curl($requestUrl, $apiParams);
 		} catch (Exception $e) {
-
-			$this->logCommunicationError($sysParams["method"], $requestUrl, "HTTP_ERROR_" . $e->getCode(), $e->getMessage());
-			return false;
+			return $e->getMessage().' at the AopClinet line 444.';
 		}
 
 		//解析AOP返回结果
@@ -477,8 +453,7 @@ class AopClient {
 
 		//返回的HTTP文本不是标准JSON或者XML，记下错误日志
 		if (false === $respWellFormed) {
-			$this->logCommunicationError($sysParams["method"], $requestUrl, "HTTP_RESPONSE_NOT_WELL_FORMED", $resp);
-			return false;
+			return 'HTTP_RESPONSE_NOT_WELL_FORMED, at the AopClinet.php line 478.';
 		}
 
 		// 验签

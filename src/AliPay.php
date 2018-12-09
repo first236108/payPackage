@@ -10,6 +10,7 @@ namespace Payment;
 
 use Payment\Ali\Aop\request\AlipayTradeFastpayRefundQueryRequest;
 use Payment\Ali\Service\AlipayTradeService;
+use Payment\Ali\Aop\request\AlipayTradeAppPayRequest;
 use Payment\Ali\Buildermodel\AlipayTradeWapPayContentBuilder;
 use Payment\Ali\Buildermodel\AlipayTradePagePayContentBuilder;
 use Payment\Ali\Buildermodel\AlipayTradeQueryContentBuilder;
@@ -47,10 +48,25 @@ class AliPay
         $this->config = array_merge($this->config, $config);
     }
 
-    public function app($subject, $out_trade_no, $total_fee, $return_url, $notify_url, $goods_tag = '', $attach = '')
+    public function app($subject, $out_trade_no, $total_fee, $notify_url = '')
     {
-        
+        $order   = [
+            'subject'      => $subject,
+            'out_trade_no' => $out_trade_no,
+            'total_amount' => $total_fee,
+            'product_code' => 'QUICK_MSECURITY_PAY'
+        ];
+        $builder = new AlipayTradeAppPayRequest();
+        if ($notify_url)
+            $builder->setNotifyUrl($notify_url);
+        else
+            $builder->setNotifyUrl($this->config['notify_url']);
+        $builder->setBizContent(json_encode($order));
+        $service  = new AlipayTradeService($this->config);
+        $response = $service->app($builder, $notify_url);
+        return $response;
     }
+
     /**
      * 手机H5支付
      * @param $subject
@@ -63,13 +79,13 @@ class AliPay
      */
     public function h5Pay($subject, $out_trade_no, $total_fee, $return_url, $notify_url, $goods_tag = '', $attach = '')
     {
-        $timeout_express = "10m";
-        $builder         = new AlipayTradeWapPayContentBuilder();
+        //$timeout_express = "10m";
+        $builder = new AlipayTradeWapPayContentBuilder();
         $builder->setBody($subject);
         $builder->setSubject($subject);
         $builder->setOutTradeNo($out_trade_no);
         $builder->setTotalAmount($total_fee);
-        $builder->setTimeExpress($timeout_express);
+        //$builder->setTimeExpress($timeout_express);
         $pay = new AlipayTradeService($this->config);
         $res = $pay->wapPay($builder, $return_url, $notify_url);
         exit();//跳转
@@ -120,7 +136,7 @@ class AliPay
     /**
      * 单笔转账到支付宝账户
      * @param $out_biz_no
-     * @param $payee_type
+     * @param int $payee_type 0,1
      * @param $payee_account
      * @param $amount
      * @param string $payer_show_name
@@ -130,9 +146,10 @@ class AliPay
      */
     public function transToAccount($out_biz_no, $payee_type, $payee_account, $amount, $payer_show_name = '', $payee_real_name = '', $remark = '')
     {
+        $type    = [0 => 'ALIPAY_USERID', 1 => 'ALIPAY_LOGONID'];
         $builder = new AlipayTradeFundTransToaccountContentBuilder();
         $builder->setOutBizNo($out_biz_no);
-        $builder->setPayeeType($payee_type);
+        $builder->setPayeeType($type[$payee_type]);
         $builder->setPayeeAccount($payee_account);
         $builder->setAmount($amount);
         if ($payer_show_name) $builder->setPayerShowName($payer_show_name);
@@ -233,5 +250,22 @@ class AliPay
         if ($result->code != '10000')
             return ['ret' => 0, 'msg' => $result->msg . $result->sub_msg];
         return ['ret' => 1, 'msg' => json_decode(json_encode($result), true)];
+    }
+
+    public function notify($func)
+    {
+        if (empty($_POST)) {
+            exit('回调内容为空');
+        }
+
+        $service = new AlipayTradeService($this->config);
+        $result  = $service->check($_POST);
+        if ($result) {
+            if ($_POST['trade_status'] == 'TRADE_SUCCESS' || $_POST['trade_status'] == 'TRADE_FINISHED')
+                $res = call_user_func($func, $_POST);
+            if (true === $res)
+                exit('success');
+        }
+        exit('fail');
     }
 }

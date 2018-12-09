@@ -70,17 +70,28 @@ class WxPayResults extends WxPayDataBase
         $this->values[$key] = $value;
     }
 
+    public static function Init($xml, $key)
+    {
+        $obj = new self($key);
+        $obj->FromXml($xml);
+        if ($obj->values['return_code'] != 'SUCCESS') {
+            return $obj->GetValues();
+        }
+        $obj->CheckSign();
+        return $obj->GetValues();
+    }
+
     /**
      * 将xml转为array
      * @param string $xml
      * @throws WxPayException
      */
-    public function Init($xml)
+    public function Init2($xml)
     {
         $this->FromXml($xml);
         //fix bug 2015-06-29
         if ($this->values['return_code'] != 'SUCCESS') {
-            return $obj->GetValues();
+            return $this->GetValues();
         }
         $this->CheckSign();
         return $this->GetValues();

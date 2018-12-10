@@ -18,7 +18,9 @@ class Index
             $totle_fee    = 0.01;//单位：元
             $out_trade_no = '20181208' . mt_rand(1000, 9999);//商户订单号
             $refund_no    = '20181208' . mt_rand(1000, 9999);//退款单号
-    
+            //传递此参数为数组时，返回二维码图片base64数据，不传返回付款url,数组可选内容为['size'=>3,'level'=>0,'margin'=>4] size二维码大小,level二维码容错等级0~4,margin图片距离边缘的margin
+            $build_png    = [];
+            
             #微信
             $wx_config = [
                 'appid'        => 'wxd61e5ed1a1234567',
@@ -36,8 +38,8 @@ class Index
             //$res = $pay->jsPay($subject, $out_trade_no, $totle_fee, $notify_url);
             # h5支付，url需自行跳转
             //$res = $pay->h5Pay($subject, $out_trade_no, $totle_fee, $return_url, $notify_url);
-            # 订单收款二维码
-            //$res = $pay->qrcodePay($subject, $out_trade_no, $totle_fee, $return_url, $notify_url);
+            # 订单收款二维码,$build_png为可选参数
+            //$res = $pay->qrcodePay($subject, $out_trade_no, $totle_fee, $return_url, $build_png);
             #订单查询
             //$res = $pay->query($out_trade_no);
             #退款，第一个参数为退款单号，第二个参数为订单总金额，第三个参数为本次退款金额，第四(商户订单号)第五(微信订单号)参数任选其一，支持一个订单分多次退款。
@@ -66,8 +68,8 @@ class Index
             //$pay->h5Pay($subject, $out_trade_no, $totle_fee, $return_url, $notify_url);
             # pc网页支付，可扫码或登录支付宝账号完成支付流程
             //$pay->pagePay($subject, $out_trade_no, $totle_fee, $return_url, $notify_url);
-            #当面付，根所订单生成收款二维码
-            //$res = $pay->qrPay($subject, $out_trade_no, $totle_fee, $notify_url);
+            #当面付，根所订单生成收款二维码,$build_png为可选参数
+            //$res = $pay->qrPay($subject, $out_trade_no, $totle_fee, $notify_url, $build_png);
             #单笔转账,第二个参数为账户类型，它指明收款人$payee_account的类型，0代表$payee_account是userId,1代表$payee_account是支付宝登录用户名
             //$res = $pay->transToAccount($out_biz_no, 0, $payee_account, $totle_fee);
             #退款,$out_trade_no或支付宝订单号$trade_no二选一即可；

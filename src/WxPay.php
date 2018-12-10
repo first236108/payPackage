@@ -49,8 +49,13 @@ class WxPay
         $input->SetTrade_type("APP");
         $pay    = new WxPayApi($this->config);
         $result = $pay->unifiedOrder($input);
-        dump($result);
-        die;
+        if ($result['return_code'] == 'FAIL') {
+            return ['ret' => 0, 'msg' => $result['return_msg']];
+        }
+        if ($result['result_code'] == 'FAIL') {
+            return ['ret' => 0, 'msg' => $result['err_code_des']];
+        }
+        return $result;
     }
 
     public function jsPay($subject, $out_trade_no, $total_fee, $notify_url, $goods_tag = '', $attach = '')
@@ -94,7 +99,7 @@ class WxPay
         return ['ret' => 1, 'data' => $result['mweb_url'] . '&redirect_url=' . urlencode($return_url)];
     }
 
-    public function qrcodePay($subject, $out_trade_no, $total_fee, $notify_url, $goods_tag = '', $attach = '')
+    public function qrcodePay($subject, $out_trade_no, $total_fee, $notify_url, $build_png = false, $goods_tag = '', $attach = '')
     {
         $input = new WxPayUnifiedOrder($this->config['key']);
         $input->SetBody($subject);
@@ -114,6 +119,9 @@ class WxPay
         }
         if ($result['result_code'] == 'FAIL') {
             return ['ret' => 0, 'msg' => $result['err_code_des']];
+        }
+        if (is_array($build_png)) {
+            $result["code_url"] = QRcode::png($result["code_url"], true, $build_png['level'] ?? QR_ECLEVEL_L, $build_png['size'] ?? 3, $build_png['margin'] ?? 4);
         }
         return ['ret' => 1, 'data' => $result["code_url"]];
 
